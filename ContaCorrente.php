@@ -19,20 +19,31 @@ class ContaCorrente
 		$this->numero = $numero;
 		$this->saldo = $saldo;
 
+		#Atributo estático que incrementa 1 valor sempre
+		#que um objeto for criado
+		ContaCorrente::$totalDeContas ++;
+
 		#Bloco try() catch() para lançar exceções
 		try{
 
-			self::$taxaOperacao = intDiv(30, self::$totalDeContas);
-
-		}catch(Error $e){
-
-			echo "Não é possivel realizar divisão por zero.";
-			exit;
+			#Para cada uma das opções do movimento financeiro no
+			#banco, são aplicadas taxas. Uma taxa para o saque,
+			#depósito e transfência. A função intdiv() retorna 
+			#um inteiro entre a divisão dos dois valores
+			if(ContaCorrente::$totalDeContas < 1){
+				throw new Exception("Valor inferior a zero!");
+			}
+			ContaCorrente::$taxaOperacao = 30 / ContaCorrente::$totalDeContas;
 
 		}
+		#No php temos 2 classes para lançar exceções que são
+		#as classe Error e Exception que retornan mensagens
+		#de erros diferentes
+		catch(Error $erro){
+			echo "Não é possivel realizar divisão por zero.";
+			exit;
+		}
 
-		#
-		self::$totalDeContas ++;
 	}
 
 	#O método mágico __get() é disparado sempre que qualquer atributos da classe
@@ -63,8 +74,13 @@ class ContaCorrente
 	public function transferir($valor, ContaCorrente $contaCorrente)
 	{
 		if(!is_numeric($valor)){ 
-			echo "O valor passado não é um número válido!";
-			exit;
+			throw new Exception("O valor passado não é um número.");
+		}
+
+		#Estrutura if() inpedindo a transferência de
+		#valores negativos
+		if ($valor < 0) {
+			throw new Exception("Não é permitido a transferência de valores negativos.");
 		}
 
 		$this->sacar($valor);
