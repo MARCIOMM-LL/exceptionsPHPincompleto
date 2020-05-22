@@ -1,5 +1,7 @@
 <?php
 
+namespace App\Alura;
+
 class Validacao
 {
 
@@ -25,7 +27,7 @@ class Validacao
 		#Se não for um numérico, será lançada uma exceção
 		if(!is_numeric($valor)){
 
-			throw new Exception("O Tipo passado nao é um número válido.");
+			throw new InvalidArgumentException("O Tipo passado nao é um número válido.");
 			
 		}
 

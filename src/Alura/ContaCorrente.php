@@ -1,5 +1,10 @@
 <?php
 
+namespace App\Alura;
+
+use App\Alura\SaldoInsuficienteException;
+use App\Alura\OperacaoNaoRealizadaException;
+
 class ContaCorrente
 {
 	private $titular;
@@ -11,6 +16,10 @@ class ContaCorrente
 	public static $totalDeContas;
 	public static $taxaOperacao;
 
+	private $totalDeSaquesNaoPermitidos;
+
+	public static $operacaoNaoRealizada;
+
 	#O método mágico __construct() é disparado assim que é criado um objeto
 	public function __construct($titular, $agencia, $numero, $saldo)
 	{
@@ -19,8 +28,7 @@ class ContaCorrente
 		$this->numero = $numero;
 		$this->saldo = $saldo;
 
-		#Atributo estático que incrementa 1 valor sempre
-		#que um objeto for criado
+		#Atributo estático que incrementa 1 valor sempre que um objeto for criado
 		ContaCorrente::$totalDeContas ++;
 
 		#Bloco try() catch() para lançar exceções
@@ -31,16 +39,19 @@ class ContaCorrente
 			#depósito e transfência. A função intdiv() retorna 
 			#um inteiro entre a divisão dos dois valores
 			if(ContaCorrente::$totalDeContas < 1){
-				throw new Exception("Valor inferior a zero!");
+				throw new Exception("O número de contas é inferior 0!");
 			}
-			ContaCorrente::$taxaOperacao = 30 / ContaCorrente::$totalDeContas;
+			
+			ContaCorrente::$taxaOperacao = (30 / ContaCorrente::$totalDeContas);
 
 		}
 		#No php temos 2 classes para lançar exceções que são
 		#as classe Error e Exception que retornan mensagens
-		#de erros diferentes
-		catch(Error $erro){
-			echo "Não é possivel realizar divisão por zero.";
+		#de erros diferentes. A classe error() é uma classe 
+		#de erros personalizados, e a classe exception é uma
+		#classe de erros específicos da classe
+		catch(Exception $erro){
+			echo $erro->getMessage();
 			exit;
 		}
 
@@ -69,17 +80,22 @@ class ContaCorrente
 		$this->$atributo = $valor;
 	}
 
-	#O tipo ContaCorrente é também uma classe,
-	#que nos dá acesso aos seus métodos
+	#O tipo ContaCorrente é também uma classe, que nos dá acesso aos seus métodos
+	#O tipo ContaCorrente serve para declarar uma instância de ContaCorrente
 	public function transferir($valor, ContaCorrente $contaCorrente)
 	{
+		/*
+		#Estrutura if() verificando se o $valor é numérico
 		if(!is_numeric($valor)){ 
-			throw new Exception("O valor passado não é um número.");
+			throw new InvalidArgumentException("O valor passado não é um número.");
 		}
 
-		#Estrutura if() inpedindo a transferência de
-		#valores negativos
+		#Estrutura if() inpedindo a transferência de valores negativos
 		if ($valor < 0) {
+
+			#No php exceptions temos algumas classes para o tratamento de erros além
+			#das classes error() e exception(), como por exemplo a classe demonstrada abaixo
+			#que é muito utilizada nos parâmetros errados
 			throw new Exception("Não é permitido a transferência de valores negativos.");
 		}
 
@@ -88,6 +104,36 @@ class ContaCorrente
 
 		#O return $this serve para encadear métodos
 		return $this;
+		*/
+
+		try{
+			$arquivo = new LeitorArquivo("logTransferencia.txt");
+
+			$arquivo->abrirArquivo();
+			$arquivo->escreverNoArquivo();
+
+			Validacao::verificaNumerico($valor);
+
+			Validacao::verificaValorNegativo($valor);
+
+			$this->sacar($valor);
+
+			$contaCorrente->depositar($valor);
+
+			$arquivo->fecharArquivo();
+
+			return $this;
+
+		}catch(\Exception $e){
+
+			ContaCorrente::$operacaoNaoRealizada ++;
+			throw new \exception\OperacaoNaoRealizadaException("Operação não realizada", 55,$e);
+
+		}finally{
+			echo "Finally";
+			$arquivo->fecharArquivo();
+
+		}
 	}
 
 	#Método getTitular() para não acessar diretamente o atributo $titular
@@ -102,6 +148,13 @@ class ContaCorrente
 	{ 
 		#Validação que se certifica se o valor é numérico
 		Validacao::verificaNumerico($valor);
+
+		if($valor > $this->saldo){
+
+			#Lançando a minha própria exception
+			throw new SaldoInsuficienteException("Saldo insuficiente.",
+		                                         $valor, $this->saldo);
+		}
 
 		$this->saldo -= $valor;
 		return $this;
